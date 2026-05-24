@@ -1,0 +1,34 @@
+name: Generate Finnkino schedule
+
+on:
+  schedule:
+    - cron: '0 * * * *'   # every hour at :00
+  workflow_dispatch:       # allow manual run from GitHub UI
+
+jobs:
+  generate:
+    runs-on: self-hosted
+    permissions:
+      contents: write      # needed to commit index.html back
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Generate schedule
+        run: python generate.py
+
+      - name: Commit and push index.html
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          if git diff --staged --quiet; then
+            echo "No changes — skipping commit"
+          else
+            git commit -m "chore: update schedule [skip ci]"
+            git push
+          fi

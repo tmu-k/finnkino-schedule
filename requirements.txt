@@ -1,0 +1,2 @@
+# No third-party dependencies — stdlib only (urllib, gzip, json, re, datetime)
+# JWT is fetched via the Cloudflare Worker in cf-worker/; see TOKEN_WORKER_URL.
