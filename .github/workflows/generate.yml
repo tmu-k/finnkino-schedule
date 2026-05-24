@@ -2,7 +2,7 @@ name: Generate Finnkino schedule
 
 on:
   schedule:
-    - cron: '0 * * * *'   # every hour at :00
+    - cron: '0 3-21 * * *'   # every hour, skipping midnight–05:00 Finnish time (UTC+2/+3)
   workflow_dispatch:       # allow manual run from GitHub UI
 
 jobs:
