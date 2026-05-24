@@ -1,4 +1,4 @@
-# Finnkino näytösajat
+# Finnkino schedule 
 
 Static HTML page showing Finnkino showtimes across all theaters for today and the next two days. Generated hourly and served via GitHub Pages — no server needed.
 
