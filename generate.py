@@ -409,6 +409,13 @@ def render_html(
       .shows-grid {{ grid-template-columns: 1fr; }}
       footer {{ padding-left: 1rem; padding-right: 1rem; }}
     }}
+
+    @media (max-width: 390px) {{
+      header, .filters, .shows-grid, .show-count, #empty, footer {{ padding-left: 0.5rem; padding-right: 0.5rem; }}
+      header {{ gap: 0.5rem; }}
+      .date-tab {{ padding: 0.25rem 0.45rem; }}
+      .date-tab-more {{ padding: 0.25rem 0.35rem; }}
+    }}
   </style>
 </head>
 <body>
