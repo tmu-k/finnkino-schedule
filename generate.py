@@ -565,7 +565,15 @@ function update() {{
   render();
 }}
 
-theaterSelect.addEventListener('change', () => {{ updateMovieDropdown(); render(); }});
+// Restore saved theater selection
+const savedTheater = localStorage.getItem('finnkino-theater');
+if (savedTheater) theaterSelect.value = savedTheater;
+
+theaterSelect.addEventListener('change', () => {{
+  localStorage.setItem('finnkino-theater', theaterSelect.value);
+  updateMovieDropdown();
+  render();
+}});
 movieSelect.addEventListener('change', render);
 
 update();
