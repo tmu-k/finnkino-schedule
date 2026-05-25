@@ -321,6 +321,18 @@ def render_html(
     .tab-label {{ font-weight: 600; }}
     .tab-sub   {{ font-size: 0.68rem; opacity: 0.75; }}
 
+    .date-tab-more {{
+      background: none;
+      border: 1px solid #333;
+      color: #777;
+      padding: 0.3rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      cursor: pointer;
+    }}
+    .date-tab-more:focus {{ outline: none; border-color: #555; }}
+    .date-tab-more.active {{ border-color: #e5ac00; color: #e5ac00; background: rgba(229,172,0,0.08); }}
+
     .filters {{
       display: flex;
       flex-wrap: wrap;
@@ -434,8 +446,8 @@ const emptyEl       = document.getElementById('empty');
 // Default to first date that has shows; fall back to today
 let activeDate = DATES.find(d => SHOWS_BY_DATE[d].length > 0) || DATES[0];
 
-// Build date-tab buttons
-DATES.forEach((d, i) => {{
+// Build date-tab buttons for first 3 days, date picker for the rest
+DATES.slice(0, 3).forEach((d, i) => {{
   const [y, m, day] = d.split('-').map(Number);
   const weekday = FI_WEEKDAYS[new Date(y, m - 1, day).getDay()];
   const btn = document.createElement('button');
@@ -443,9 +455,30 @@ DATES.forEach((d, i) => {{
   btn.dataset.date = d;
   btn.innerHTML = `<span class="tab-label">${{DAY_LABELS[i]}}</span>`
                 + `<span class="tab-sub">${{weekday}} ${{day}}.${{m}}.</span>`;
-  btn.addEventListener('click', () => {{ activeDate = d; update(); }});
+  btn.addEventListener('click', () => {{ activeDate = d; extraDateSel.value = ''; update(); }});
   tabsEl.appendChild(btn);
 }});
+
+// Extra date picker for days 3–6 that have shows
+const extraDates = DATES.slice(3).filter(d => SHOWS_BY_DATE[d].length > 0);
+const extraDateSel = document.createElement('select');
+extraDateSel.className = 'date-tab-more' + (extraDates.includes(activeDate) ? ' active' : '');
+extraDateSel.innerHTML = '<option value="">···</option>';
+extraDates.forEach(d => {{
+  const [y, m, day] = d.split('-').map(Number);
+  const weekday = FI_WEEKDAYS[new Date(y, m - 1, day).getDay()];
+  const o = document.createElement('option');
+  o.value = d;
+  o.textContent = `${{weekday}} ${{day}}.${{m}}.`;
+  if (d === activeDate) o.selected = true;
+  extraDateSel.appendChild(o);
+}});
+extraDateSel.addEventListener('change', () => {{
+  if (!extraDateSel.value) return;
+  activeDate = extraDateSel.value;
+  update();
+}});
+if (extraDates.length) tabsEl.appendChild(extraDateSel);
 
 // Theater groups — selectable at the top of the dropdown
 const THEATER_GROUPS = [
@@ -502,6 +535,9 @@ function updateTabs() {{
   tabsEl.querySelectorAll('.date-tab').forEach(btn =>
     btn.classList.toggle('active', btn.dataset.date === activeDate)
   );
+  const isExtra = extraDates.includes(activeDate);
+  extraDateSel.classList.toggle('active', isExtra);
+  if (!isExtra) extraDateSel.value = '';
 }}
 
 function updateMovieDropdown() {{
@@ -593,9 +629,9 @@ def main() -> None:
     sites = fetch_sites(headers)
     site_ids = [s["id"] for s in sites]
 
-    # Fetch today + next 2 days so the user can switch between them.
+    # Fetch today + next 6 days so the user can browse the full week.
     today = datetime.date.today()
-    dates = [today + datetime.timedelta(days=i) for i in range(3)]
+    dates = [today + datetime.timedelta(days=i) for i in range(10)]
     shows_by_date: dict[str, list[dict]] = {}
     for d in dates:
         raw = fetch_schedule(headers, site_ids, d.isoformat())
@@ -606,7 +642,7 @@ def main() -> None:
     out = Path(__file__).parent / "index.html"
     out.write_text(html, encoding="utf-8")
     total = sum(len(v) for v in shows_by_date.values())
-    print(f"[main] wrote {out} ({total} total shows across 3 days, {out.stat().st_size // 1024} KB)")
+    print(f"[main] wrote {out} ({total} total shows across {len(dates)} days, {out.stat().st_size // 1024} KB)")
 
 
 if __name__ == "__main__":
