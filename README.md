@@ -1,16 +1,17 @@
 # Finnkino schedule 
 
-Static HTML page showing Finnkino showtimes across all theaters for today and the next two days. Generated hourly and served via GitHub Pages — no server needed.
+Static HTML page showing Finnkino showtimes across all theaters for today and the next two days. Generated every 30 minutes and served via GitHub Pages — no server needed.
 
 https://tmu-k.github.io/finnkino-schedule/
 
 ## How it works
 
-1. A GitHub Actions cron job runs `generate.py` every hour on a **self-hosted runner**
-2. The script fetches a JWT token embedded in the Finnkino website HTML
-3. Uses the token to pull showtimes from `digital-api.finnkino.fi` for all 17 theaters
-4. Renders a self-contained `index.html` with 3 days of data baked in as JSON
-5. Commits the file back to the repo; GitHub Pages serves it
+1. An Unraid User Scripts cron job (`*/30 * * * *`) triggers the GitHub Actions workflow via the GitHub API
+2. GitHub Actions runs `generate.py` on a **self-hosted runner**
+3. The script fetches a JWT token embedded in the Finnkino website HTML
+4. Uses the token to pull showtimes from `digital-api.finnkino.fi` for all 17 theaters
+5. Renders a self-contained `index.html` with 3 days of data baked in as JSON
+6. Commits the file back to the repo; GitHub Pages serves it
 
 The page has a date picker (Tänään / Huomenna / Ylihuomenna) and dropdowns for filtering by theater and movie. It defaults to the first day that still has upcoming shows.
 
@@ -19,6 +20,22 @@ The page has a date picker (Tänään / Huomenna / Ylihuomenna) and dropdowns fo
 Finnkino's site is behind Cloudflare, which hard-blocks GitHub's hosted runner IPs (Azure datacenters). A self-hosted runner on a home server bypasses this since it has a residential IP.
 
 The runner is a Docker container (`myoung34/github-runner`) running on an Unraid server.
+
+## Why trigger from Unraid instead of GitHub's cron?
+
+GitHub Actions' built-in scheduler can be unreliable — it sometimes stops firing after a force push or repository history rewrite. Triggering via `workflow_dispatch` from an external cron is more dependable.
+
+The Unraid User Scripts cron runs this every 30 minutes:
+
+```bash
+curl -s -X POST \
+  -H "Authorization: token YOUR_PAT" \
+  -H "Accept: application/vnd.github.v3+json" \
+  https://api.github.com/repos/tmu-k/finnkino-schedule/actions/workflows/generate.yml/dispatches \
+  -d '{"ref":"main"}'
+```
+
+The PAT needs **Actions: Read and write** permission on the repository.
 
 ## Local usage
 
