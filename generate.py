@@ -290,7 +290,7 @@ def render_html(
 
     header h1 {{ font-size: 1.1rem; font-weight: 600; letter-spacing: -0.02em; white-space: nowrap; }}
     header h1 span {{ color: #e5ac00; font-weight: 700; }}
-    .header-updated {{ font-size: 0.72rem; color: #555; margin-left: auto; white-space: nowrap; }}
+    footer {{ padding: 1.25rem 1.5rem; font-size: 0.72rem; color: #555; border-top: 1px solid #1a1a1a; }}
 
     .date-tabs {{
       display: flex;
@@ -393,7 +393,7 @@ def render_html(
     @media (max-width: 600px) {{
       header, .filters, .shows-grid, .show-count, #empty {{ padding-left: 1rem; padding-right: 1rem; }}
       .shows-grid {{ grid-template-columns: 1fr; }}
-      .header-updated {{ margin-left: 0; }}
+      footer {{ padding-left: 1rem; padding-right: 1rem; }}
     }}
   </style>
 </head>
@@ -402,7 +402,6 @@ def render_html(
 <header>
   <h1><span>Finnkino</span> näytösajat</h1>
   <div class="date-tabs" id="date-tabs"></div>
-  <span class="header-updated">Päivitetty {generated_display}</span>
 </header>
 
 <div class="filters">
@@ -413,6 +412,7 @@ def render_html(
 <div class="show-count" id="show-count"></div>
 <div class="shows-grid" id="shows-grid"></div>
 <div id="empty" hidden>Ei näytöksiä valituilla hakuehdoilla.</div>
+<footer>Päivitetty {generated_display}</footer>
 
 <script>
 const SHOWS_BY_DATE = {shows_by_date_js};
