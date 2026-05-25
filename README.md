@@ -4,6 +4,8 @@ Static HTML page showing Finnkino showtimes across all theaters for today and th
 
 https://tmu-k.github.io/finnkino-schedule/
 
+Disclaimer: This is an unofficial personal project with no affiliation to Finnkino.
+
 ## How it works
 
 1. An Unraid User Scripts cron job (`*/30 * * * *`) triggers the GitHub Actions workflow via the GitHub API
