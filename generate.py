@@ -238,6 +238,7 @@ def parse_shows(data: dict) -> list[dict]:
                 "rating": rating,
                 "siteId": str(s.get("siteId", "")),
                 "filmId": str(s.get("filmId", "")),
+                "showtimeId": str(s.get("id", "")),
             }
         )
 
@@ -580,8 +581,8 @@ function render() {{
     card.className = 'show-card';
     card.innerHTML = `
       <div class="show-time">${{s.start}}<span class="end">→ ${{s.end}}</span></div>
-      <div class="show-title">${{s.filmId
-        ? `<a href="https://www.finnkino.fi/elokuvat/elokuva/${{s.filmId}}/" target="_blank" rel="noopener">${{s.title}}</a>`
+      <div class="show-title">${{s.showtimeId
+        ? `<a href="https://www.finnkino.fi/liput/valitse-paikat/?showtimeId=${{s.showtimeId}}" target="_blank" rel="noopener">${{s.title}}</a>`
         : s.title}}</div>
       ${{s.originalTitle && s.originalTitle !== s.title
         ? `<div class="show-orig">${{s.originalTitle}}</div>` : ''}}
