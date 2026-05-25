@@ -447,16 +447,51 @@ DATES.forEach((d, i) => {{
   tabsEl.appendChild(btn);
 }});
 
-// Populate theater dropdown (all theaters that appear in any day)
-const allSiteIds = new Set(DATES.flatMap(d => SHOWS_BY_DATE[d].map(s => s.siteId)));
-SITES
-  .filter(s => allSiteIds.has(s.id))
-  .sort((a, b) => a.name.localeCompare(b.name, 'fi'))
-  .forEach(s => {{
-    const o = document.createElement('option');
-    o.value = s.id; o.textContent = s.name;
-    theaterSelect.appendChild(o);
-  }});
+// Theater groups — selectable at the top of the dropdown
+const THEATER_GROUPS = [
+  {{ label: 'Pääkaupunkiseudun ohjelmisto', names: ['Flamingo Vantaa','Itis Helsinki','Kinopalatsi Helsinki','Maxim Helsinki','Omena Espoo','Sello Espoo','Tennispalatsi Helsinki'] }},
+  {{ label: 'Tampereen ohjelmisto',         names: ['Cine Atlas Tampere','Plevna Tampere'] }},
+  {{ label: 'Turun ja Raision ohjelmisto',  names: ['Kinopalatsi Turku','LUXE Mylly Raisio'] }},
+];
+const allSiteIds   = new Set(DATES.flatMap(d => SHOWS_BY_DATE[d].map(s => s.siteId)));
+const availSites   = SITES.filter(s => allSiteIds.has(s.id));
+const nameToId     = Object.fromEntries(availSites.map(s => [s.name, s.id]));
+const groupedNames = new Set(THEATER_GROUPS.flatMap(g => g.names));
+
+// Group options at the top
+const ogGroups = document.createElement('optgroup');
+ogGroups.label = 'Alueet';
+THEATER_GROUPS.forEach(group => {{
+  const memberIds = group.names.map(n => nameToId[n]).filter(Boolean);
+  if (!memberIds.length) return;
+  const o = document.createElement('option');
+  o.value = 'g:' + group.label;
+  o.textContent = group.label;
+  o.dataset.siteids = memberIds.join(',');
+  ogGroups.appendChild(o);
+}});
+theaterSelect.appendChild(ogGroups);
+
+// Individual theaters below
+const ogSingle = document.createElement('optgroup');
+ogSingle.label = 'Teatterit';
+availSites.sort((a, b) => a.name.localeCompare(b.name, 'fi')).forEach(s => {{
+  const o = document.createElement('option');
+  o.value = s.id; o.textContent = s.name;
+  ogSingle.appendChild(o);
+}});
+theaterSelect.appendChild(ogSingle);
+
+// Returns a Set of siteIds for the current selection, or null for "all"
+function getFilterIds() {{
+  const val = theaterSelect.value;
+  if (!val) return null;
+  if (val.startsWith('g:')) {{
+    const ids = theaterSelect.options[theaterSelect.selectedIndex].dataset.siteids.split(',');
+    return new Set(ids);
+  }}
+  return new Set([val]);
+}}
 
 function theaterUrl(name) {{
   const slug = THEATER_URLS[name];
@@ -470,9 +505,9 @@ function updateTabs() {{
 }}
 
 function updateMovieDropdown() {{
-  const siteId  = theaterSelect.value;
+  const ids     = getFilterIds();
   const shows   = SHOWS_BY_DATE[activeDate];
-  const visible = siteId ? shows.filter(s => s.siteId === siteId) : shows;
+  const visible = ids ? shows.filter(s => ids.has(s.siteId)) : shows;
   const prev    = movieSelect.value;
   const titles  = [...new Set(visible.map(s => s.title))].sort((a, b) => a.localeCompare(b, 'fi'));
   movieSelect.innerHTML = '<option value="">Kaikki elokuvat</option>';
@@ -485,10 +520,10 @@ function updateMovieDropdown() {{
 }}
 
 function render() {{
-  const siteId = theaterSelect.value;
+  const ids    = getFilterIds();
   const title  = movieSelect.value;
   let filtered = SHOWS_BY_DATE[activeDate];
-  if (siteId) filtered = filtered.filter(s => s.siteId === siteId);
+  if (ids)   filtered = filtered.filter(s => ids.has(s.siteId));
   if (title)  filtered = filtered.filter(s => s.title  === title);
 
   showsGrid.innerHTML = '';
