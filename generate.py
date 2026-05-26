@@ -668,9 +668,12 @@ def main() -> None:
 
     html = render_html(sites, shows_by_date, [d.isoformat() for d in dates], generated_at)
 
+    total = sum(len(v) for v in shows_by_date.values())
+    if total == 0:
+        raise RuntimeError("No shows fetched across any of the 10 days — Finnkino API may have changed")
+
     out = Path(__file__).parent / "index.html"
     out.write_text(html, encoding="utf-8")
-    total = sum(len(v) for v in shows_by_date.values())
     print(f"[main] wrote {out} ({total} total shows across {len(dates)} days, {out.stat().st_size // 1024} KB)")
 
 
