@@ -263,6 +263,7 @@ def render_html(
         f"{generated_at.day}.{generated_at.month}.{generated_at.year} "
         f"klo {generated_at.strftime('%H:%M')}"
     )
+    generated_iso = generated_at.isoformat()
 
     return f"""<!DOCTYPE html>
 <html lang="fi">
@@ -293,6 +294,15 @@ def render_html(
     header h1 {{ font-size: 1.1rem; font-weight: 600; letter-spacing: -0.02em; white-space: nowrap; }}
     header h1 span {{ color: #e5ac00; font-weight: 700; }}
     footer {{ padding: 1.25rem 1.5rem; font-size: 0.72rem; color: #555; border-top: 1px solid #1a1a1a; }}
+
+    #stale-warning {{
+      display: none;
+      padding: 0.6rem 1.5rem;
+      background: #2d1f00;
+      border-bottom: 1px solid #5a3d00;
+      color: #f0c060;
+      font-size: 0.8rem;
+    }}
 
     .date-tabs {{
       display: flex;
@@ -424,6 +434,8 @@ def render_html(
   <h1><span>Finnkino</span> näytösajat</h1>
   <div class="date-tabs" id="date-tabs"></div>
 </header>
+
+<div id="stale-warning"></div>
 
 <div class="filters">
   <select id="theater-select"><option value="">Kaikki teatterit</option></select>
@@ -612,6 +624,15 @@ function update() {{
 // Restore saved theater selection
 const savedTheater = localStorage.getItem('finnkino-theater');
 if (savedTheater) theaterSelect.value = savedTheater;
+
+// Staleness warning
+const GENERATED_AT = new Date("{generated_iso}");
+const hoursOld = (Date.now() - GENERATED_AT) / 3600000;
+if (hoursOld >= 2) {{
+  const w = document.getElementById('stale-warning');
+  w.textContent = `⚠️ Tiedot saattavat olla vanhentuneita — päivitetty ${{Math.floor(hoursOld)}}h sitten`;
+  w.style.display = 'block';
+}}
 
 theaterSelect.addEventListener('change', () => {{
   localStorage.setItem('finnkino-theater', theaterSelect.value);
