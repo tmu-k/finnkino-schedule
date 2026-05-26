@@ -444,7 +444,7 @@ def render_html(
 
 <div class="show-count" id="show-count"></div>
 <div class="shows-grid" id="shows-grid"></div>
-<div id="empty" hidden>Ei näytöksiä valituilla hakuehdoilla.</div>
+<div id="empty" hidden>Ei näytöksiä valittuna päivänä.</div>
 <footer>Päivitetty {generated_display}</footer>
 
 <script>
