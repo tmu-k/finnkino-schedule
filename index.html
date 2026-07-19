@@ -359,7 +359,7 @@ const savedTheater = localStorage.getItem('finnkino-theater');
 if (savedTheater) theaterSelect.value = savedTheater;
 
 // Staleness warning
-const GENERATED_AT = new Date("2026-07-19T15:00:09.718884+03:00");
+const GENERATED_AT = new Date("2026-07-19T15:00:35.784265+03:00");
 const hoursOld = (Date.now() - GENERATED_AT) / 3600000;
 if (hoursOld >= 2) {
   const w = document.getElementById('stale-warning');
