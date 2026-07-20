@@ -1,9 +1,7 @@
 name: Generate Finnkino schedule
 
 on:
-  schedule:
-    - cron: '0 3-21 * * *'  # every hour 06:00–00:00 Finnish time (UTC+2/+3)
-  workflow_dispatch:       # allow manual run from GitHub UI
+  workflow_dispatch:  # triggered by Unraid cron every 30 min (see README), or manually from the GitHub UI
 
 jobs:
   generate:
