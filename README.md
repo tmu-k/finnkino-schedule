@@ -60,6 +60,11 @@ Add a Docker container with image `myoung34/github-runner:latest` and these envi
 | `RUNNER_NAME` | `unraid` (or anything) |
 | `LABELS` | `self-hosted` |
 | `RUNNER_WORKDIR` | `/tmp/github-runner` |
+| `EPHEMERAL` | `true` |
+
+`EPHEMERAL=true` makes the runner deregister and exit after every job, so each run starts from a fresh registration. Without it, an interrupted deregistration (e.g. during a GitHub Actions outage) can leave a half-written config in `/actions-runner` — which is not on a persistent volume, so a container restart won't clear it and only a remove-and-recreate recovers.
+
+This requires a Docker restart policy, since the container exits after each job. On Unraid, set **Extra Parameters** (Advanced View) to `--restart=unless-stopped` — the Autostart toggle only covers array start and is not a restart policy.
 
 ## GitHub Pages setup
 
