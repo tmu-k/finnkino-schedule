@@ -303,6 +303,7 @@ def render_html(
       color: #f0c060;
       font-size: 0.8rem;
     }}
+    #stale-warning a {{ color: inherit; text-decoration: underline; }}
 
     .date-tabs {{
       display: flex;
@@ -630,8 +631,40 @@ const GENERATED_AT = new Date("{generated_iso}");
 const hoursOld = (Date.now() - GENERATED_AT) / 3600000;
 if (hoursOld >= 2) {{
   const w = document.getElementById('stale-warning');
-  w.textContent = `⚠️ Tiedot saattavat olla vanhentuneita — päivitetty ${{Math.floor(hoursOld)}}h sitten`;
+  const base = `⚠️ Tiedot saattavat olla vanhentuneita — päivitetty ${{Math.floor(hoursOld)}}h sitten. `;
+  const msg = document.createElement('span');
+  msg.textContent = base;
+  const link = document.createElement('a');
+  link.href = 'https://www.githubstatus.com';
+  link.target = '_blank';
+  link.rel = 'noopener';
+  link.textContent = 'Tarkista GitHubin tila';
+  w.append(msg, link);
   w.style.display = 'block';
+
+  // Päivitys ajetaan GitHub Actionsissa ja julkaistaan Pagesin kautta, joten katkos
+  // kummassa tahansa selittää viiveen. Tämä vain täydentää yllä olevan viestin —
+  // jos kutsu epäonnistuu tai rajapinta muuttuu, staattinen linkki jää voimaan.
+  const STATUS_FI = {{
+    degraded_performance: 'suorituskykyongelma',
+    partial_outage: 'osittainen käyttökatko',
+    major_outage: 'käyttökatko',
+    under_maintenance: 'huoltokatko',
+  }};
+  const SEVERITY = ['under_maintenance', 'degraded_performance', 'partial_outage', 'major_outage'];
+
+  fetch('https://www.githubstatus.com/api/v2/summary.json')
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(data => {{
+      const hit = (data.components || [])
+        .filter(c => (c.name === 'Actions' || c.name === 'Pages') && STATUS_FI[c.status])
+        .sort((a, b) => SEVERITY.indexOf(b.status) - SEVERITY.indexOf(a.status))[0];
+      if (!hit) return;
+      msg.textContent = base
+        + `GitHub ${{hit.name}}issa on ${{STATUS_FI[hit.status]}}, mikä saattaa selittää viiveen — `;
+      link.textContent = 'githubstatus.com';
+    }})
+    .catch(() => {{}});
 }}
 
 theaterSelect.addEventListener('change', () => {{
