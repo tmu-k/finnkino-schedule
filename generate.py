@@ -14,7 +14,9 @@ import datetime
 import gzip
 import json
 import os
+import random
 import re
+import time
 import urllib.request
 from pathlib import Path
 
@@ -48,6 +50,11 @@ BROWSER_HEADERS = {
     "Sec-Fetch-User": "?1",
     "Upgrade-Insecure-Requests": "1",
 }
+# Token fetching: how many pages to try, and the ceiling on backoff between
+# attempts. Six attempts costs ~30s in the worst case and is only paid when
+# Cloudflare is actually challenging us.
+TOKEN_ATTEMPTS = 6
+TOKEN_BACKOFF_CAP = 15  # seconds
 ATTR_RE = re.compile(
     r"^\dD$|^(IMAX|4DX|Dolby|ScreenX|D-BOX|LUXE|iSense|HFR|Laser|PLF|annisk)",
     re.I,
@@ -112,12 +119,31 @@ def _fetch_html(url: str) -> str | None:
         return None
 
 
+def _token_candidates() -> list[str]:
+    """Pages that carry a JWT, in the order we should try them.
+
+    Cloudflare challenges a small share of requests no matter how browser-like
+    the client is, so one page is not enough to be reliable. Every theater page
+    embeds a usable token; the extras are shuffled so repeated runs spread out
+    rather than hammering the same two URLs.
+    """
+    front = [CINEMA_PAGE, "https://www.finnkino.fi/"]
+    rest = [
+        f"https://www.finnkino.fi/teatterit/{slug}/" for slug in THEATER_URLS.values()
+    ]
+    rest = [u for u in rest if u not in front]
+    random.shuffle(rest)
+    return front + rest
+
+
 def get_token() -> str:
     """Return a JWT token.
 
     In CI: calls TOKEN_WORKER_URL (Cloudflare Worker) — set as a GitHub
     repository variable (Settings → Variables → Actions).
     Locally: direct HTTP fetch with browser headers (works on residential IPs).
+    A single 403 means Cloudflare challenged that request, not that we are
+    blocked, so retry a different page after a backoff.
     """
     worker_url = os.environ.get("TOKEN_WORKER_URL", "").strip()
     if worker_url:
@@ -127,17 +153,23 @@ def get_token() -> str:
         raise RuntimeError("CF Worker failed to return a token — check the Worker logs")
 
     print("[token] TOKEN_WORKER_URL not set, trying direct HTTP (local dev)…")
-    for url in [CINEMA_PAGE, "https://www.finnkino.fi/"]:
+    urls = _token_candidates()[:TOKEN_ATTEMPTS]
+    for attempt, url in enumerate(urls, start=1):
+        if attempt > 1:
+            delay = min(2 ** (attempt - 2), TOKEN_BACKOFF_CAP) + random.uniform(0, 1)
+            print(f"[token] attempt {attempt}/{len(urls)} in {delay:.1f}s…")
+            time.sleep(delay)
         html = _fetch_html(url)
         if html:
             m = JWT_RE.search(html)
             if m:
-                print(f"[token] acquired from {url}")
+                print(f"[token] acquired from {url} (attempt {attempt})")
                 return m.group(0)
         print(f"[token] no JWT at {url}")
 
     raise RuntimeError(
-        "Could not obtain JWT. In CI, set the TOKEN_WORKER_URL repository variable."
+        f"Could not obtain JWT after {len(urls)} attempts — Cloudflare challenged "
+        "every one. In CI, set the TOKEN_WORKER_URL repository variable."
     )
 
 
