@@ -20,6 +20,13 @@ import time
 import urllib.request
 from pathlib import Path
 
+# curl_cffi reproduces Chrome's real TLS/HTTP2 fingerprint. Optional: without it
+# we fall back to urllib, which still works but gets challenged far more often.
+try:
+    from curl_cffi import requests as _curl
+except ImportError:
+    _curl = None
+
 # ── constants ───────────────────────────────────────────────────────────[...]
 
 DIGITAL_API = "https://digital-api.finnkino.fi/WSVistaWebClient/ocapi/v1"
@@ -57,6 +64,7 @@ BROWSER_HEADERS = {
 # we are actually being challenged; a healthy run takes one attempt.
 TOKEN_ATTEMPTS = 6
 TOKEN_BACKOFF = (15, 45, 90, 180, 300)  # seconds before attempts 2..6
+IMPERSONATE = "chrome124"  # keep roughly in step with BROWSER_UA
 ATTR_RE = re.compile(
     r"^\dD$|^(IMAX|4DX|Dolby|ScreenX|D-BOX|LUXE|iSense|HFR|Laser|PLF|annisk)",
     re.I,
@@ -106,8 +114,27 @@ def _token_via_worker(worker_url: str) -> str | None:
     return None
 
 
-def _fetch_html(url: str) -> str | None:
-    """Direct HTTP fetch — works from residential IPs, blocked in CI."""
+def _fetch_impersonated(url: str) -> str | None:
+    """Fetch as Chrome, matching its TLS and HTTP/2 fingerprint.
+
+    Deliberately sends no headers of our own: impersonate= sets Chrome's real
+    headers in Chrome's real order, and that order is itself fingerprinted, so
+    passing BROWSER_HEADERS here would undo the point.
+    """
+    try:
+        r = _curl.get(url, impersonate=IMPERSONATE, timeout=20)
+    except Exception as e:
+        print(f"[token] impersonated fetch failed: {e}")
+        return None
+    if r.status_code != 200:
+        print(f"[token] impersonated fetch got HTTP {r.status_code}")
+        return None
+    return r.text
+
+
+def _fetch_stdlib(url: str) -> str | None:
+    """urllib fallback. Announces a Chrome UA over a handshake no Chrome ever
+    produced, which is what Cloudflare's bot management scores against us."""
     req = urllib.request.Request(url, headers=BROWSER_HEADERS)
     try:
         with urllib.request.urlopen(req, timeout=20) as r:
@@ -119,6 +146,13 @@ def _fetch_html(url: str) -> str | None:
     except Exception as e:
         print(f"[token] direct fetch failed: {e}")
         return None
+
+
+def _fetch_html(url: str) -> str | None:
+    """Fetch a page, preferring the browser-accurate client when available."""
+    if _curl is not None:
+        return _fetch_impersonated(url)
+    return _fetch_stdlib(url)
 
 
 def _token_candidates() -> list[str]:
@@ -155,7 +189,8 @@ def get_token() -> str:
             return token
         raise RuntimeError("CF Worker failed to return a token — check the Worker logs")
 
-    print("[token] TOKEN_WORKER_URL not set, trying direct HTTP (local dev)…")
+    client = f"curl_cffi/{IMPERSONATE}" if _curl is not None else "urllib (no curl_cffi)"
+    print(f"[token] TOKEN_WORKER_URL not set, fetching directly via {client}…")
     urls = _token_candidates()[:TOKEN_ATTEMPTS]
     for attempt, url in enumerate(urls, start=1):
         if attempt > 1:

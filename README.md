@@ -41,9 +41,12 @@ The PAT needs **Actions: Read and write** permission on the repository.
 
 ## Local usage
 
-No dependencies — stdlib only.
+Needs `curl_cffi` (see `requirements.txt`) to match Chrome's TLS fingerprint —
+without it Cloudflare challenges most requests. It is optional: the script falls
+back to `urllib` if the package is missing.
 
 ```bash
+pip install -r requirements.txt
 python3 generate.py
 xdg-open index.html   # or just open the file in your browser
 ```

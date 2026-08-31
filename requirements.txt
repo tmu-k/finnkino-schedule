@@ -1,2 +1,4 @@
-# No third-party dependencies — stdlib only (urllib, gzip, json, re, datetime)
-# JWT is fetched via the Cloudflare Worker in cf-worker/; see TOKEN_WORKER_URL.
+# curl_cffi reproduces Chrome's TLS/HTTP2 fingerprint. Without it generate.py
+# still runs (urllib fallback), but Cloudflare challenges those requests far
+# more often — a Chrome User-Agent over an OpenSSL handshake is a bot signal.
+curl_cffi>=0.15,<0.17
